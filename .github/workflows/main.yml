@@ -8,6 +8,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+      - name: Install deps
+        run: sudo apt install liblo-dev liblo-tools
       - name: Install latest nim
         run: |
             curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
