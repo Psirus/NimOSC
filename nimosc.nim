@@ -17,3 +17,6 @@ proc send*(client: Client, command: string, messages: varargs[string]) =
   for message in messages:
     blobs.add(lo_blob_new(int32(len(message)), message))
   discard lo_send(client.lo_address, command, "bb", blobs[0], blobs[1])
+
+proc send*(client: Client, command: string, messages: varargs[float32]) =
+  discard lo_send(client.lo_address, command, "ff", messages[0], messages[1])
