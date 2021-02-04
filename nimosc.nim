@@ -1,8 +1,9 @@
 {.passL: "-llo".}
+import macros
 
 proc lo_address_new(ip: cstring, port: cstring): pointer {.header: "lo/lo.h", importc}
 proc lo_blob_new(size: cint, data: cstring): pointer {.header: "lo/lo.h", importc}
-proc lo_send(address: pointer, path: cstring, types: cstring): cint {.header: "lo/lo.h", importc, varargs}
+proc lo_send*(address: pointer, path: cstring, types: cstring): cint {.header: "lo/lo.h", importc, varargs}
 
 type 
   Client = object
@@ -11,12 +12,19 @@ type
 proc newClient*(ip: string, port: int): Client =
   result.lo_address = lo_address_new(ip, $port)
 
-# TODO: this varargs doesn't really make sense here atm, since the call is hardcoded for len == 2
-proc send*(client: Client, command: string, messages: varargs[string]) =
-  var blobs: seq[pointer]
-  for message in messages:
-    blobs.add(lo_blob_new(int32(len(message)), message))
-  discard lo_send(client.lo_address, command, "bb", blobs[0], blobs[1])
-
-proc send*(client: Client, command: string, messages: varargs[float32]) =
-  discard lo_send(client.lo_address, command, "ff", messages[0], messages[1])
+macro send*(client: Client, path: string, args: varargs[typed]): untyped =
+  var params = @[path, newLit("")]
+  var typestring = ""
+  for s in args:
+    case typeKind(getType(s)):
+      of ntyString: typestring.add("s")
+      of ntyInt: typestring.add("i")
+      of ntyFloat32: typestring.add("f")
+      else: error("Unsupported argument type.")
+    params.add(s)
+  params[1].strVal = typestring
+  result = newNimNode(nnkDiscardStmt)
+  result.add quote do:
+    lo_send(client.lo_address)
+  for par in params:
+    result[0].add(par)
